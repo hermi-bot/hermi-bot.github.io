@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTES Simulation - Dummy Framework</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --panel: #1e2129;
+            --accent: #00f2ff;
+            --text: #e0e0e0;
+            --warning: #ff9f43;
+            --success: #00d2ff;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            padding: 20px;
+            background: var(--panel);
+            border-bottom: 1px solid #333;
+            text-align: center;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .sim-area {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #333;
+        }
+        .info-panel {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            overflow-y: auto;
+        }
+        canvas {
+            background: #000;
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-charge { background: var(--success); color: #000; }
+        .btn-discharge { background: var(--warning); color: #000; }
+        button:active { transform: scale(0.95); }
+        h3 { margin-top: 0; color: var(--accent); }
+        .property-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        .prop-item {
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .prop-label { color: #888; display: block; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>PTES Simulation Dashboard <span style="font-size: 0.8rem; color: #888;">Dummy Framework v0.1</span></h1>
+    </header>
+    <div class="container">
+        <div class="sim-area">
+            <canvas id="simCanvas" width="600" height="400"></canvas>
+            <div class="controls">
+                <button class="btn-charge" id="chargeBtn">CHARGE (Solar Input)</button>
+                <button class="btn-discharge" id="dischargeBtn">DISCHARGE (District Heating)</button>
+            </div>
+        </div>
+        <div class="info-panel">
+            <h3>Model Properties</h3>
+            <div class="property-grid">
+                <div class="prop-item"><span class="prop-label">Type</span>Pit Storage (PTES)</div>
+                <div class="prop-item"><span class="prop-label">Depth</span>25 Meters</div>
+                <div class="prop-item"><span class="prop-label">Width</span>40 Meters</div>
+                <div class="prop-item"><span class="prop-label">Medium</span>Molten Salt</div>
+                <div class="prop-item"><span class="prop-label">Density</span>&sigma;=2100 kg/m³</div>
+                <div class="prop-item"><span class="prop-label">Heat Cap</span>Cp=1470 J/kgK</div>
+            </div>
+            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+            <h3>Sim Status</h3>
+            <div id="statusText">System Idle</div>
+            <div id="tempDisplay" style="font-size: 2rem; color: var(--accent); margin: 10px 0;">-- °C</div>
+            <p style="font-size: 0.8rem; color: #888;">
+                The "Profile" below shows the temperature gradient across the 25m pit depth.
+                Charge increases internal energy; Discharge extracts it for the grid.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const chargeBtn = document.getElementById('chargeBtn');
+        const dischargeBtn = document.getElementById('dischargeBtn');
+        const tempDisplay = document.getElementById('tempDisplay');
+        const statusText = document.getElementById('statusText');
+
+        // Model Parameters
+        let currentTemp = 150.0; // Base temp °C
+        let energy = 0; // MJ
+        const capacity = 5000; // Max MJ
+        const depth = 25; // meters
+        const resolution = 20; // nodes
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Pit Background
+            ctx.fillStyle = '#2a2d35';
+            ctx.fillRect(200, 50, 200, 300);
+            
+            // Draw Temperature Profile (The "1D" representation)
+            ctx.beginPath();
+            ctx.strokeStyle = '#00f2ff';
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00f2ff';
+            
+            ctx.moveTo(200, 350 - (currentTemp * 0.5)); // Surface temp
+            for(let i=0; i<=resolution; i++) {
+                const h = (i / resolution) * 300;
+                const t = currentTemp - (i * 2); // Linear gradient dummy
+                ctx.lineTo(200 + i * 20, 350 - (t * 0.5));
+            }
+            ctx.stroke();
+            
+            // Draw Surface Line
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(200, 50);
+            ctx.lineTo(400, 50);
+            ctx.stroke();
+
+            // UI Update
+            tempDisplay.innerText = currentTemp.toFixed(1) + " °C";
+            requestAnimationFrame(draw);
+        }
+
+        chargeBtn.onclick = () => {
+            statusText.innerText = "Charging... (Solar Input)";
+            let interval = setInterval(() => {
+                if (energy < capacity) {
+                    energy += 10;
+                    currentTemp += 0.5;
+                    if(currentTemp > 400) currentTemp = 400;
+                } else {
+                    clearInterval(interval);
+                    statusText.innerText = "Storage Full!";
+                }
+            }, 50);
+        };
+
+        dischargeBtn.onclick = () => {
+            statusText.innerText = "Discharging... (District Heating)";
+            let interval = setInterval(() => {
+                if (energy > 0) {
+                    energy -= 10;
+                    currentTemp -= 0.5;
+                    if(currentTemp < 20) currentTemp = 20;
+                } else {
+                    clearInterval(interval);
+                    statusText.innerText = "Storage Empty!";
+                }
+            }, 50);
+        };
+
+        draw();
+    </script>
+</body>
+</html>
