@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum-Inspired Energy Flow Simulator</title>
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --accent: #00f2ff;
+            --secondary: #7000ff;
+            --text: #e0e0e0;
+            --panel: rgba(20, 20, 25, 0.8);
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            padding: 20px;
+            background: var(--panel);
+            border-bottom: 1px solid #333;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        #sim-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            max-width: 90%;
+            max-height: 80%;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
+        }
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #444;
+            display: flex;
+            gap: 30px;
+            backdrop-filter: blur(10px);
+            align-items: center;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            filter: brightness(1.2);
+        }
+        .description {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            max-width: 300px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Quantum-Inspired Energy Flow Simulator</h1>
+    </header>
+    <div class="description">
+        <p>Simulate the difference between <strong>Classical Diffusion</strong> (random pathing) and <strong>Quantum-Inspired Routing</strong> (fractal branching inspired by photosynthesis).</p>
+    </div>
+    <div id="sim-container">
+        <canvas id="simCanvas"></canvas>
+        <div class="controls">
+            <div class="toggle-group">
+                <label>Mode:</label>
+                <button id="modeToggle">Switch to Quantum Mode</button>
+            </div>
+            <div class="stat-box">
+                <div>System Efficiency</div>
+                <div id="effScore" class="stat-value">0%</div>
+            </div>
+            <div class="stat-box">
+                <div>Exciton Count</div>
+                <div id="excitonCount" class="stat-value">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const modeToggle = document.getElementById('modeToggle');
+        const effDisplay = document.getElementById('effScore');
+        const countDisplay = document.getElementById('excitonCount');
+
+        let width, height;
+        let mode = 'classical'; // 'classical' or 'quantum'
+        let particles = [];
+        let branches = [];
+        const particleCount = 100;
+
+        function init() {
+            width = canvas.width = 800;
+            height = canvas.height = 600;
+            
+            // Build Fractal Tree (The Quantum Route)
+            branches = [];
+            generateFractal(width / 2, height / 2, 0, -Math.PI / 2, 8);
+            
+            // Init Particles
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: width / 2,
+                    y: height / 2,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1.0,
+                    type: i % 2 === 0 ? 'exciton' : 'photon'
+                });
+            }
+        }
+
+        function generateFractal(x, y, angle, length, depth) {
+            if (depth === 0) return;
+            
+            const x2 = x + Math.cos(angle) * length;
+            const y2 = y + Math.sin(angle) * length;
+            
+            branches.push({x1: x, y1: y, x2: x2, y2: y2});
+            
+            const newLength = length * 0.75;
+            generateFractal(x2, y2, angle - 0.4, newLength, depth - 1);
+            generateFractal(x2, y2, angle + 0.4, newLength, depth - 1);
+        }
+
+        function update() {
+            ctx.fillStyle = 'rgba(10, 10, 12, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Branches
+            ctx.strokeStyle = mode === 'quantum' ? 'rgba(0, 242, 255, 0.15)' : 'rgba(112, 0, 255, 0.05)';
+            ctx.lineWidth = 1;
+            branches.forEach(b => {
+                ctx.beginPath();
+                ctx.moveTo(b.x1, b.y1);
+                ctx.lineTo(b.x2, b.y2);
+                ctx.stroke();
+            });
+
+            let successCount = 0;
+            
+            particles.forEach((p, index) => {
+                if (mode === 'classical') {
+                    // Brownian motion (random walk)
+                    p.vx += (Math.random() - 0.5) * 0.5;
+                    p.vy += (Math.random() - 0.5) * 0.5;
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.005;
+                } else {
+                    // Quantum-inspired: follow branches
+                    let closest = null;
+                    let minDist = Infinity;
+                    
+                    branches.forEach(b => {
+                        const d = distToSegment(p.x, p.y, b.x1, b.y1, b.x2, b.y2);
+                        if (d < minDist) {
+                            minDist = d;
+                            closest = b;
+                        }
+                    });
+
+                    if (closest && minDist < 20) {
+                        const angle = Math.atan2(closest.y2 - closest.y1, closest.x2 - closest.x1);
+                        p.vx = Math.cos(angle) * 4;
+                        p.vy = Math.sin(angle) * 4;
+                    } else {
+                        p.vx += (Math.random() - 0.5) * 0.2;
+                        p.vy += (Math.random() - 0.5) * 0.2;
+                    }
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.002;
+                }
+
+                // Collision / Goal check (the bottom of the screen)
+                if (p.y > height - 50) {
+                    if (mode === 'quantum' && Math.abs(p.x - width/2) < 100) {
+                        successCount++;
+                    }
+                    particles.splice(index, 1);
+                }
+
+                // Draw particle
+                ctx.fillStyle = p.life > 0 ? `rgba(0, 242, 255, ${p.life})` : 'transparent';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Replenish particles
+            if (particles.length < particleCount) {
+                particles.push({
+                    x: width / 2,
+                    y: height / 2,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1.0
+                });
+            }
+
+            // Update UI
+            effDisplay.innerText = mode === 'quantum' ? 
+                Math.min(100, Math.round((successCount / particleCount) * 1000)) + "%" : "12%";
+            countDisplay.innerText = particles.length;
+
+            requestAnimationFrame(update);
+        }
+
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const l2 = dx*dx + dy*dy;
+            if (l2 === 0) return Math.sqrt((px-x1)**2 + (py-y1)**2);
+            let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.sqrt((px - (x1 + t * dx))**2 + (py - (y1 + t * dy))**2);
+        }
+
+        modeToggle.addEventListener('click', () => {
+            mode = mode === 'classical' ? 'quantum' : 'classical';
+            modeToggle.innerText = mode === 'classical' ? "Switch to Quantum Mode" : "Switch to Classical Mode";
+            init();
+        });
+
+        init();
+        update();
+    </script>
+</body>
+</html>
